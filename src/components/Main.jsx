@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useNavigate } from "react-router-dom";
 // import "../Styles/Dashboard.css";
+import "../Styles/Main.css";
 import { auth, db, logout } from "../firestore/firebase";
 import { query, collection, getDocs, where } from "firebase/firestore";
 import Box from "@mui/material/Box";
@@ -56,6 +57,7 @@ function EditToolbar(props) {
     setSnackbar,
     user,
     name,
+    duplicateIds,
   } = props;
 
   // const dispatch = useDispatch();
@@ -112,13 +114,17 @@ function EditToolbar(props) {
     }));
   };
 
+  var fn = function (event) {
+    handleFileChange(event);
+  };
+
   function openFile() {
     const fileInput = document.getElementById("fileInput");
 
-    fileInput.addEventListener("change", function (event) {
-      handleFileChange(event);
-      const snick = "nick";
-    });
+    // fileInput.removeEventListener("change", function (event) {
+    //   handleFileChange(event);
+    // });
+    fileInput.addEventListener("change", fn);
     fileInput.click();
   }
 
@@ -157,6 +163,7 @@ function EditToolbar(props) {
         }
 
         document.getElementById("fileInput").value = "";
+        document.getElementById("fileInput").removeEventListener("change", fn);
       };
 
       reader.readAsBinaryString(file);
@@ -191,6 +198,10 @@ function EditToolbar(props) {
     }
 
     //reload
+    dispatch(fetchTerms());
+  };
+
+  const cancelChanges = () => {
     dispatch(fetchTerms());
   };
 
@@ -303,8 +314,16 @@ function EditToolbar(props) {
           startIcon={<SaveIcon />}
           // onClick={handleSaveChanges}
           onClick={doSaveChanges}
+          disabled={duplicateIds !== undefined && duplicateIds.length > 0}
         >
           Save Changes
+        </Button>
+        <Button
+          color="primary"
+          startIcon={<CancelIcon />}
+          onClick={cancelChanges}
+        >
+          Cancel Changes
         </Button>
         {/* {user && (
           <Button color="primary" startIcon={<LogOutIcon />} onClick={logout}>
@@ -349,6 +368,22 @@ function Main() {
     fetchUserName();
     dispatch(fetchTerms());
   }, [user, loading, dispatch]);
+
+  // Function to identify duplicate rows based on a key
+  const findDuplicates = (arr, key) => {
+    return arr.filter(
+      (row, index, self) => self.findIndex((r) => r[key] === row[key]) !== index
+    );
+  };
+
+  const duplicateIds = useSelector((state) =>
+    findDuplicates(state.medTerms.medTermsArray, "medTerm").map((row) => row.id)
+  );
+
+  // Function to apply custom styling for duplicate rows
+  const getRowClassName = (params) => {
+    return duplicateIds.includes(params.id) ? "duplicate-row" : "";
+  };
 
   // fetch medTerms
   // useEffect(() => {
@@ -514,6 +549,8 @@ function Main() {
         onRowEditStop={handleRowEditStop}
         processRowUpdate={processRowUpdate}
         // onProcessRowUpdateError={handleProcessRowUpdateError}
+        getRowId={(row) => row.id}
+        getRowClassName={getRowClassName}
         slots={{
           toolbar: EditToolbar,
         }}
@@ -528,6 +565,7 @@ function Main() {
             setSnackbar,
             user,
             name,
+            duplicateIds,
           },
         }}
       />
