@@ -77,6 +77,7 @@ const medTermSlice = createSlice({
   name: "MedTerms",
   initialState: {
     medTermsArray: [],
+    originalTerms: [],
   },
   reducers: {
     addTerms: (state, action) => {
@@ -86,6 +87,9 @@ const medTermSlice = createSlice({
       state.medTermsArray = state.medTermsArray.map((item) =>
         item.id === action.payload.id ? action.payload : item
       );
+    },
+    filterTerms: (state, action) => {
+      state.medTermsArray = action.payload;
     },
     deleteTerms: (state, action) => {
       state.medTermsArray = state.medTermsArray.filter(
@@ -97,11 +101,13 @@ const medTermSlice = createSlice({
     builder
       .addCase(fetchTerms.fulfilled, (state, action) => {
         state.medTermsArray = action.payload;
+        state.originalTerms = action.payload;
       })
       .addCase(updateTermsInDb.fulfilled, (state, action) => {})
       .addCase(deleteTermsInDb.fulfilled, (state, action) => {});
   },
 });
 
-export const { addTerms, editTerms, deleteTerms } = medTermSlice.actions;
+export const { addTerms, editTerms, filterTerms, deleteTerms } =
+  medTermSlice.actions;
 export default medTermSlice.reducer;

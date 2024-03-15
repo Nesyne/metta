@@ -43,12 +43,15 @@ import {
   updateTermsInDb,
   deleteTermsInDb,
   fetchTerms,
+  filterTerms,
 } from "../slices/medTermSlice";
 import * as XLSX from "xlsx";
+import Search from "./Search";
 
 function EditToolbar(props) {
   const {
     terms,
+    originalTerms,
     termsToDelete,
     dispatch,
     snackbar,
@@ -75,7 +78,6 @@ function EditToolbar(props) {
     logout();
     setAnchorEl(null);
   };
-
   const handleAddNewRow = () => {
     // Generate a unique ID for the new row
     const id = uuidv4();
@@ -202,7 +204,28 @@ function EditToolbar(props) {
   };
 
   const cancelChanges = () => {
+    if (rowModesModel) {
+      terms.forEach((item) => {
+        if (
+          rowModesModel[item.id] &&
+          rowModesModel[item.id].mode === GridRowModes.Edit
+        ) {
+          rowModesModel[item.id].mode = GridRowModes.View;
+        }
+      });
+    }
+
     dispatch(fetchTerms());
+  };
+
+  //handle searching
+  const handleSearch = (query) => {
+    const filtered = originalTerms.filter((row) =>
+      Object.values(row).some((value) =>
+        String(value).toLowerCase().includes(query.toLowerCase())
+      )
+    );
+    dispatch(filterTerms(filtered));
   };
 
   return (
@@ -330,6 +353,7 @@ function EditToolbar(props) {
             Logout
           </Button>
         )} */}
+        <Search onSearch={handleSearch} />
       </GridToolbarContainer>
     </div>
   );
@@ -337,6 +361,8 @@ function EditToolbar(props) {
 
 function Main() {
   const terms = useSelector((state) => state.medTerms.medTermsArray);
+
+  const originalTerms = useSelector((state) => state.medTerms.originalTerms);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -385,11 +411,6 @@ function Main() {
     return duplicateIds.includes(params.id) ? "duplicate-row" : "";
   };
 
-  // fetch medTerms
-  // useEffect(() => {
-  //   dispatch(fetchTerms());
-  // }, [dispatch]);
-
   const handleDeleteClick = (id) => () => {
     if (!id) return;
 
@@ -414,20 +435,13 @@ function Main() {
       [id]: { mode: GridRowModes.View },
     });
 
-    // const editedRow = modifiedItems.find((row) => row.id === id);
-    // if (editedRow.isNew) {
-    //   // setData(data.filter((row) => row.id !== id));
-    // }
+    if (originalTerms) {
+      let origi = originalTerms.find((item) => item.id === id);
 
-    //remove edits
-    // const og = allData.find((row) => row.id === id);
-    // if (og) {
-    //   const updatedRows = [...data];
-    //   const rowIndex = updatedRows.findIndex((row) => row.id === og.id);
-
-    //   updatedRows[rowIndex] = og;
-    //   // setData(updatedRows);
-    // }
+      if (origi) {
+        dispatch(editTerms(origi));
+      }
+    }
   };
 
   const processRowUpdate = (newRow, oldRow) => {
@@ -557,6 +571,7 @@ function Main() {
         slotProps={{
           toolbar: {
             terms,
+            originalTerms,
             termsToDelete,
             dispatch,
             snackbar,
